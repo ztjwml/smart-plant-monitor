@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能盆栽实时监控系统 - 修复版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--dark);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .title-section h1 {
+            color: var(--dark);
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .title-section h1 i {
+            color: var(--success);
+            margin-right: 10px;
+        }
+
+        .title-section .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .status-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.online {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success);
+            border: 2px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .status-badge.offline {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            border: 2px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .online .status-dot {
+            background: var(--success);
+        }
+
+        .offline .status-dot {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(236, 240, 241, 0.5);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .card-title i {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .sensor-value {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .value-display {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .value-main {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1;
+        }
+
+        .value-unit {
+            font-size: 1.1rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .value-icon {
+            font-size: 3.5rem;
+            color: var(--primary);
+            opacity: 0.8;
+        }
+
+        .progress-container {
+            margin-top: 25px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: var(--gray);
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: var(--light);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .soil-moisture .progress-fill {
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+        }
+
+        .controls-panel {
+            grid-column: 1 / -1;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-size: 1.2rem;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 70px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--gray);
+            transition: .4s;
+            border-radius: 36px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 28px;
+            width: 28px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(34px);
+        }
+
+        .switch-label {
+            font-weight: 500;
+            color: var(--dark);
+            min-width: 60px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        .threshold-control {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .range-slider {
+            flex: 1;
+            height: 10px;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .threshold-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 80px;
+            text-align: center;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-selector {
+            padding: 10px 20px;
+            border: 2px solid var(--light);
+            border-radius: 10px;
+            background: white;
+            color: var(--dark);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-selector:hover, .time-selector.active {
+            border-color: var(--primary);
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--primary);
+        }
+
+        .chart-wrapper {
+            height: 400px;
+            position: relative;
+        }
+
+        .data-table {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(236, 240, 241, 0.5);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid var(--light);
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--light);
+        }
+
+        tr:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px;
+            }
+            
+            .btn {
+                min-width: 100%;
+            }
+            
+            .value-main {
+                font-size: 2.8rem;
+            }
+            
+            .control-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+
+        /* 动画效果 */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.5s ease;
+        }
+
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 头部 -->
+            <div class="header">
+                <div class="title-section">
+                    <h1><i class="fas fa-leaf"></i> 智能盆栽实时监控系统</h1>
+                    <div class="subtitle">设备ID: {{ deviceId }} | 云端同步: 实时</div>
+                </div>
+                <div class="status-section">
+                    <div :class="['status-badge', isOnline ? 'online' : 'offline']">
+                        <div class="status-dot"></div>
+                        <span>{{ isOnline ? '设备在线' : '设备离线' }}</span>
+                    </div>
+                    <div class="status-badge" style="background: rgba(52, 152, 219, 0.1); color: var(--primary);">
+                        <i class="fas fa-sync-alt fa-spin"></i>
+                        <span>更新: {{ lastUpdate || '--:--' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 传感器数据 -->
+            <div class="dashboard">
+                <!-- 温度 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-thermometer-half"></i>
+                            <span>温度</span>
+                        </div>
+                        <div class="card-extra" :style="{color: temperature > 30 ? '#e74c3c' : '#3498db'}">
+                            {{ temperature > 30 ? '偏高' : temperature < 15 ? '偏低' : '正常' }}
+                        </div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="value-display">
+                            <div class="value-main">{{ temperature.toFixed(1) }}</div>
+                            <div class="value-unit">°C</div>
+                        </div>
+                        <i class="fas fa-temperature-high value-icon"></i>
+                    </div>
+                </div>
+
+                <!-- 湿度 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-tint"></i>
+                            <span>空气湿度</span>
+                        </div>
+                        <div class="card-extra" :style="{color: humidity > 80 ? '#3498db' : '#f39c12'}">
+                            {{ humidity > 80 ? '潮湿' : humidity < 30 ? '干燥' : '舒适' }}
+                        </div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="value-display">
+                            <div class="value-main">{{ humidity.toFixed(1) }}</div>
+                            <div class="value-unit">%</div>
+                        </div>
+                        <i class="fas fa-water value-icon"></i>
+                    </div>
+                </div>
+
+                <!-- 土壤湿度 -->
+                <div class="card soil-moisture">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-seedling"></i>
+                            <span>土壤湿度</span>
+                        </div>
+                        <div class="card-extra" :style="{color: soilMoisture < config.soilThreshold ? '#2ecc71' : '#e74c3c'}">
+                            {{ soilMoisture < config.soilThreshold ? '湿润' : '干燥' }}
+                        </div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="value-display">
+                            <div class="value-main">{{ soilMoisture }}</div>
+                            <div class="value-unit">%</div>
+                        </div>
+                        <i class="fas fa-soil value-icon"></i>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span>干燥</span>
+                            <span>阈值: {{ config.soilThreshold }}%</span>
+                            <span>湿润</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" :style="{width: soilMoisture + '%'}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 光照 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-sun"></i>
+                            <span>光照强度</span>
+                        </div>
+                        <div class="card-extra" :style="{color: lightIntensity > 1000 ? '#f39c12' : '#3498db'}">
+                            {{ lightIntensity > 1000 ? '强光' : lightIntensity < 300 ? '弱光' : '适中' }}
+                        </div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="value-display">
+                            <div class="value-main">{{ lightIntensity }}</div>
+                            <div class="value-unit">lux</div>
+                        </div>
+                        <i class="fas fa-sun value-icon"></i>
+                    </div>
+                </div>
+
+                <!-- 控制面板 -->
+                <div class="card controls-panel">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-gamepad"></i>
+                            <span>设备控制</span>
+                        </div>
+                        <div class="card-extra" :style="{color: config.controlMode === 'manual' ? '#f39c12' : '#2ecc71'}">
+                            {{ config.controlMode === 'manual' ? '手动模式' : '自动模式' }}
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <h3>控制模式</h3>
+                        <div class="control-row">
+                            <span class="switch-label">自动</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" v-model="config.controlMode" true-value="manual" false-value="auto">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="switch-label">手动</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>水泵控制</h3>
+                        <div class="control-row">
+                            <span class="switch-label">关闭</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" v-model="config.manualRelayState" :disabled="config.controlMode !== 'manual'">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="switch-label">开启</span>
+                            <span style="color: var(--gray); margin-left: 20px;">
+                                {{ config.controlMode === 'manual' ? '手动控制' : '自动控制' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>湿度阈值设置</h3>
+                        <div class="threshold-control">
+                            <span class="switch-label">阈值</span>
+                            <input type="range" min="0" max="100" v-model="config.soilThreshold" class="range-slider">
+                            <div class="threshold-value">{{ config.soilThreshold }}%</div>
+                        </div>
+                    </div>
+
+                    <div class="control-buttons">
+                        <button class="btn btn-primary" @click="updateConfig">
+                            <i class="fas fa-save"></i>
+                            保存设置
+                        </button>
+                        <button class="btn btn-danger" @click="emergencyStop" :disabled="!relayState">
+                            <i class="fas fa-stop"></i>
+                            紧急停止
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="card-title">
+                        <i class="fas fa-chart-line"></i>
+                        <span>历史数据趋势</span>
+                    </div>
+                    <div class="chart-controls">
+                        <button v-for="period in timePeriods" 
+                                :key="period.value"
+                                class="time-selector"
+                                :class="{active: selectedPeriod === period.value}"
+                                @click="selectedPeriod = period.value">
+                            {{ period.label }}
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas ref="chartCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 数据表格 -->
+            <div class="data-table">
+                <h3><i class="fas fa-table"></i> 实时数据</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>温度 (°C)</th>
+                            <th>湿度 (%)</th>
+                            <th>土壤湿度 (%)</th>
+                            <th>光照 (lux)</th>
+                            <th>水泵状态</th>
+                            <th>控制模式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in historyData" :key="index">
+                            <td>{{ formatTime(item.timestamp) }}</td>
+                            <td :style="{color: item.temperature > 30 ? '#e74c3c' : 'inherit'}">
+                                {{ item.temperature.toFixed(1) }}
+                            </td>
+                            <td>{{ item.humidity.toFixed(1) }}</td>
+                            <td :style="{color: item.soilMoisture < config.soilThreshold ? '#2ecc71' : '#e74c3c'}">
+                                {{ item.soilMoisture }}
+                            </td>
+                            <td>{{ item.lightIntensity }}</td>
+                            <td>
+                                <span :class="['status-badge', item.relayState ? 'online' : 'offline']" style="padding: 5px 10px;">
+                                    {{ item.relayState ? '运行中' : '停止' }}
+                                </span>
+                            </td>
+                            <td>{{ item.controlMode === 'manual' ? '手动' : '自动' }}</td>
+                        </tr>
+                        <tr v-if="historyData.length === 0">
+                            <td colspan="7" style="text-align: center; color: var(--gray);">
+                                暂无数据
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer">
+                <p>智能盆栽监控系统 © 2024 | 设备ID: {{ deviceId }} | 更新间隔: 2秒</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // 微信云开发配置
+                const appid = 'wx3bb0d4ed9cad0c5c';
+                const envId = 'ztj-9g36574we7f9c18c';
+                const functionName = 'device';
+                const deviceId = 'arduino_001';
+                
+                let accessToken = '';
+                let chartInstance = null;
+                let lastTimestamp = 0;
+
+                // 检测是否是本地环境
+                const isLocalHost = window.location.hostname === 'localhost' || 
+                                   window.location.hostname === '127.0.0.1' ||
+                                   window.location.hostname === '';
+
+                // 模拟数据生成器
+                class MockDataGenerator {
+                    constructor() {
+                        this.baseData = {
+                            temperature: 25.5,
+                            humidity: 65,
+                            lightIntensity: 750,
+                            soilMoisture: 45,
+                            relayState: false,
+                            soilThreshold: 80,
+                            controlMode: 'auto',
+                            manualRelayState: false
+                        };
+                    }
+
+                    generateRealisticData() {
+                        // 模拟真实波动
+                        const now = new Date();
+                        const hour = now.getHours();
+                        
+                        // 时间影响
+                        let tempBase = 25;
+                        if (hour >= 6 && hour < 12) tempBase += 2;
+                        if (hour >= 12 && hour < 18) tempBase += 4;
+                        if (hour >= 18 && hour < 22) tempBase += 1;
+                        if (hour >= 22 || hour < 6) tempBase -= 2;
+                        
+                        this.baseData.temperature = (tempBase + (Math.random() - 0.5) * 3).toFixed(1);
+                        this.baseData.humidity = (50 + Math.random() * 20).toFixed(1);
+                        
+                        // 土壤湿度变化
+                        if (this.baseData.relayState) {
+                            // 浇水
+                            this.baseData.soilMoisture = Math.min(100, 
+                                this.baseData.soilMoisture + Math.random() * 5);
+                        } else {
+                            // 蒸发
+                            this.baseData.soilMoisture = Math.max(0, 
+                                this.baseData.soilMoisture - Math.random() * 2);
+                        }
+                        
+                        // 光照
+                        if (hour >= 6 && hour < 18) {
+                            this.baseData.lightIntensity = Math.floor(300 + Math.random() * 1200);
+                        } else {
+                            this.baseData.lightIntensity = Math.floor(Math.random() * 100);
+                        }
+                        
+                        // 自动控制逻辑
+                        if (this.baseData.controlMode === 'auto') {
+                            this.baseData.relayState = this.baseData.soilMoisture > this.baseData.soilThreshold;
+                        }
+                        
+                        return { ...this.baseData };
+                    }
+                }
+
+                // 响应式数据
+                const isOnline = ref(true);  // 本地模式默认在线
+                const lastUpdate = ref('');
+                const sensorData = reactive({
+                    temperature: 25.5,
+                    humidity: 65,
+                    lightIntensity: 750,
+                    soilMoisture: 45,
+                    relayState: false
+                });
+                
+                const config = reactive({
+                    soilThreshold: 80,
+                    controlMode: 'auto',
+                    manualRelayState: false
+                });
+
+                const historyData = ref([]);
+                const selectedPeriod = ref('1h');
+                const timePeriods = [
+                    { label: '1小时', value: '1h' },
+                    { label: '6小时', value: '6h' },
+                    { label: '24小时', value: '24h' },
+                    { label: '7天', value: '7d' }
+                ];
+
+                // 获取access_token - 本地测试版
+                async function getAccessToken() {
+                    // 如果是本地环境，使用模拟token
+                    if (isLocalHost) {
+                        console.log('🌱 本地测试模式：使用模拟token');
+                        accessToken = 'mock-token-local-' + Date.now();
+                        return true;
+                    }
+                    
+                    // 生产环境才调用真实API
+                    try {
+                        const response = await fetch(
+                            `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appid}&secret=d344fce7fb62465cc9ccd30458396d6d`,
+                            { method: 'GET' }
+                        );
+                        const data = await response.json();
+                        if (data.access_token) {
+                            accessToken = data.access_token;
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('获取token失败:', error);
+                    }
+                    return false;
+                }
+
+                // 模拟云函数
+                async function mockCloudFunction(action, data = {}) {
+                    const mockGenerator = new MockDataGenerator();
+                    
+                    // 更新基础配置
+                    if (data.soilThreshold !== undefined) {
+                        mockGenerator.baseData.soilThreshold = data.soilThreshold;
+                        config.soilThreshold = data.soilThreshold;
+                    }
+                    if (data.controlMode !== undefined) {
+                        mockGenerator.baseData.controlMode = data.controlMode;
+                        config.controlMode = data.controlMode;
+                    }
+                    if (data.manualRelayState !== undefined) {
+                        mockGenerator.baseData.manualRelayState = data.manualRelayState;
+                        config.manualRelayState = data.manualRelayState;
+                    }
+                    
+                    // 模拟网络延迟
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    switch (action) {
+                        case 'getDeviceData':
+                            const deviceData = mockGenerator.generateRealisticData();
+                            return {
+                                success: true,
+                                data: {
+                                    deviceId: 'arduino_001',
+                                    ...deviceData,
+                                    lastUpdate: new Date(),
+                                    timestamp: Date.now()
+                                }
+                            };
+                            
+                        case 'getConfig':
+                            return {
+                                success: true,
+                                soilThreshold: config.soilThreshold,
+                                controlMode: config.controlMode,
+                                manualRelayState: config.manualRelayState
+                            };
+                            
+                        case 'updateConfig':
+                            console.log('配置更新（模拟）:', data);
+                            Object.assign(mockGenerator.baseData, data);
+                            Object.assign(config, data);
+                            return { 
+                                success: true, 
+                                message: '配置已保存（本地模拟模式）',
+                                data: data
+                            };
+                            
+                        case 'realtimeQuery':
+                            const realtimeData = mockGenerator.generateRealisticData();
+                            return {
+                                success: true,
+                                hasNewData: true,
+                                data: realtimeData
+                            };
+                            
+                        default:
+                            return { success: true, message: `操作 ${action} 执行成功（模拟）` };
+                    }
+                }
+
+                // 调用云函数 - 修复版
+                async function callCloudFunction(action, data = {}) {
+                    console.log(`📡 调用云函数: ${action}`, data);
+                    
+                    // 如果是本地环境，使用模拟数据
+                    if (isLocalHost) {
+                        console.log('🔄 本地模式：使用模拟数据');
+                        return await mockCloudFunction(action, data);
+                    }
+                    
+                    // 生产环境调用真实API
+                    if (!accessToken) {
+                        if (!await getAccessToken()) {
+                            return null;
+                        }
+                    }
+                    
+                    const requestData = {
+                        action,
+                        deviceId,
+                        ...data
+                    };
+
+                    try {
+                        const response = await fetch(
+                            `https://api.weixin.qq.com/tcb/invokecloudfunction?access_token=${accessToken}&env=${envId}&name=${functionName}`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(requestData)
+                            }
+                        );
+                        
+                        const result = await response.json();
+                        
+                        // 解析resp_data
+                        if (result.errcode === 0 && result.resp_data) {
+                            return JSON.parse(result.resp_data);
+                        }
+                        return result;
+                    } catch (error) {
+                        console.error('调用云函数失败:', error);
+                        return null;
+                    }
+                }
+
+                // 获取设备数据
+                async function fetchDeviceData() {
+                    const result = await callCloudFunction('getDeviceData');
+                    if (result && result.success) {
+                        Object.assign(sensorData, result.data);
+                        sensorData.relayState = result.data.relayState || false;
+                        isOnline.value = true;
+                        lastUpdate.value = new Date().toLocaleTimeString();
+                        
+                        // 添加到历史数据
+                        historyData.value.unshift({
+                            ...result.data,
+                            timestamp: Date.now()
+                        });
+                        
+                        // 保持最多100条记录
+                        if (historyData.value.length > 100) {
+                            historyData.value = historyData.value.slice(0, 100);
+                        }
+                    } else {
+                        isOnline.value = false;
+                    }
+                }
+
+                // 获取配置
+                async function fetchConfig() {
+                    const result = await callCloudFunction('getConfig');
+                    if (result && result.success) {
+                        config.soilThreshold = result.soilThreshold || 80;
+                        config.controlMode = result.controlMode || 'auto';
+                        config.manualRelayState = result.manualRelayState || false;
+                    }
+                }
+
+                // 更新配置
+                async function updateConfig() {
+                    const result = await callCloudFunction('updateConfig', {
+                        soilThreshold: config.soilThreshold,
+                        controlMode: config.controlMode,
+                        manualRelayState: config.manualRelayState
+                    });
+                    
+                    if (result && result.success) {
+                        alert('配置已保存！');
+                        fetchDeviceData();
+                    } else {
+                        alert('保存失败，请重试');
+                    }
+                }
+
+                // 紧急停止
+                async function emergencyStop() {
+                    if (confirm('确定要紧急停止水泵吗？')) {
+                        const result = await callCloudFunction('updateConfig', {
+                            controlMode: 'manual',
+                            manualRelayState: false
+                        });
+                        
+                        if (result && result.success) {
+                            alert('水泵已紧急停止！');
+                            config.controlMode = 'manual';
+                            config.manualRelayState = false;
+                            fetchDeviceData();
+                        }
+                    }
+                }
+
+                // 实时查询
+                async function realtimeQuery() {
+                    const result = await callCloudFunction('realtimeQuery', {
+                        lastTimestamp: lastTimestamp
+                    });
+                    
+                    if (result && result.success && result.hasNewData) {
+                        Object.assign(sensorData, result.data);
+                        lastTimestamp = result.data.timestamp;
+                        isOnline.value = true;
+                        lastUpdate.value = new Date().toLocaleTimeString();
+                        
+                        // 更新历史数据
+                        historyData.value.unshift({
+                            ...result.data,
+                            timestamp: result.data.timestamp
+                        });
+                        
+                        if (historyData.value.length > 100) {
+                            historyData.value = historyData.value.slice(0, 100);
+                        }
+                        
+                        // 更新图表
+                        updateChart();
+                    }
+                }
+
+                // 初始化图表
+                function initChart() {
+                    const ctx = this.$refs.chartCanvas.getContext('2d');
+                    chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: '温度 (°C)',
+                                    data: [],
+                                    borderColor: '#e74c3c',
+                                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                    borderWidth: 2,
+                                    tension: 0.4,
+                                    fill: true
+                                },
+                                {
+                                    label: '湿度 (%)',
+                                    data: [],
+                                    borderColor: '#3498db',
+                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                    borderWidth: 2,
+                                    tension: 0.4,
+                                    fill: true
+                                },
+                                {
+                                    label: '土壤湿度 (%)',
+                                    data: [],
+                                    borderColor: '#2ecc71',
+                                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                                    borderWidth: 2,
+                                    tension: 0.4,
+                                    fill: true
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        font: {
+                                            size: 12
+                                        },
+                                        padding: 20
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                    padding: 10,
+                                    titleFont: {
+                                        size: 14
+                                    },
+                                    bodyFont: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: false,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // 更新图表
+                function updateChart() {
+                    if (!chartInstance) return;
+                    
+                    const data = historyData.value.slice(0, 20).reverse();
+                    chartInstance.data.labels = data.map(item => 
+                        new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    );
+                    
+                    chartInstance.data.datasets[0].data = data.map(item => item.temperature);
+                    chartInstance.data.datasets[1].data = data.map(item => item.humidity);
+                    chartInstance.data.datasets[2].data = data.map(item => item.soilMoisture);
+                    
+                    chartInstance.update();
+                }
+
+                // 工具函数
+                function formatTime(timestamp) {
+                    return new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                }
+
+                // 监听配置变化
+                watch(() => config.controlMode, (newVal) => {
+                    if (newVal === 'auto') {
+                        config.manualRelayState = false;
+                    }
+                });
+
+                // 初始化
+                onMounted(() => {
+                    console.log('🌱 智能盆栽监控系统 - 本地测试模式启动');
+                    
+                    // 初始化图表
+                    setTimeout(() => initChart(), 100);
+                    
+                    // 初始加载数据
+                    fetchConfig();
+                    fetchDeviceData();
+                    
+                    // 设置定时器
+                    const interval = setInterval(() => {
+                        realtimeQuery();
+                    }, 2000); // 2秒更新一次
+                    
+                    // 清理定时器
+                    onUnmounted(() => {
+                        clearInterval(interval);
+                    });
+                });
+
+                return {
+                    deviceId,
+                    isOnline,
+                    lastUpdate,
+                    ...sensorData,
+                    config,
+                    historyData,
+                    selectedPeriod,
+                    timePeriods,
+                    updateConfig,
+                    emergencyStop,
+                    formatTime,
+                    relayState: computed(() => sensorData.relayState)
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
